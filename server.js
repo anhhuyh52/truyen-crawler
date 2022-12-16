@@ -3,9 +3,9 @@ const cheerio = require("cheerio");
 const fs = require("fs");
 var EventEmitter = require("events").EventEmitter;
 emitter = new EventEmitter();
-const totalPage = 1120;
-
+emitter.on("fetchNext", delayedCrawl);
 const arr = [];
+
 function removeVietnameseTones(str) {
   str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
   str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
@@ -38,90 +38,74 @@ function removeVietnameseTones(str) {
   return str;
 }
 
-function doCrawl() {
-  setTimeout(function () {
-    //do crawling operation, e.g.
-    const URL = "https://truyenfull.vn/danh-sach/truyen-moi/";
+//do crawling operation, e.g.
+const URL = "https://truyenfull.vn/danh-sach/truyen-moi/";
 
-    request(URL, function (err, res, body) {
-      if (err) {
-        console.log(err, "error occurred while hitting URL");
-      } else {
-        let $ = cheerio.load(body);
-        $("div.row[itemtype='https://schema.org/Book']").each(function (index) {
-          const imageList = $(this)
-            .find("div.col-xs-3>div>div")
-            .attr("data-desk-image");
-          const imageListMob = $(this)
-            .find("div.col-xs-3>div>div")
-            .attr("data-image");
-          const name = $(this)
-            .find("div.col-xs-7>div>h3.truyen-title>a")
-            .text();
-          const author = $(this).find("div.col-xs-7>div>span.author").text();
-          const linkName = removeVietnameseTones(name)
-            .toLowerCase()
-            .replace(/ /g, "-");
-          const obj = {
-            name: name,
-            author: author.trim(),
-            link: linkName,
-            imageListDesk: imageList,
-            imageListMob: imageListMob,
-          };
-          arr.push(obj);
-        });
-        emitter.emit("fetchNext");
-      }
+request(URL, function (err, res, body) {
+  if (err) {
+    console.log(err, "error occurred while hitting URL");
+  } else {
+    let $ = cheerio.load(body);
+    $("div.row[itemtype='https://schema.org/Book']").each(function (index) {
+      const imageList = $(this)
+        .find("div.col-xs-3>div>div")
+        .attr("data-desk-image");
+      const imageListMob = $(this)
+        .find("div.col-xs-3>div>div")
+        .attr("data-image");
+      const name = $(this).find("div.col-xs-7>div>h3.truyen-title>a").text();
+      const author = $(this).find("div.col-xs-7>div>span.author").text();
+      const linkName = removeVietnameseTones(name)
+        .toLowerCase()
+        .replace(/ /g, "-");
+      const obj = {
+        name: name,
+        author: author.trim(),
+        link: linkName,
+        imageListDesk: imageList,
+        imageListMob: imageListMob,
+      };
+      arr.push(obj);
     });
+  }
+});
 
-    for (let i = 2; i <= totalPage; i++) {
-      const baseURL =
-        "https://truyenfull.vn/danh-sach/truyen-moi/trang-" + i + "/";
-      request(baseURL, function (err, res, body) {
-        if (err) {
-          console.log(err, "error occurred while hitting URL");
-        } else {
-          let $ = cheerio.load(body);
-          $("div.row[itemtype='https://schema.org/Book']").each(function (
-            index
-          ) {
-            const imageList = $(this)
-              .find("div.col-xs-3>div>div")
-              .attr("data-desk-image");
-            const imageListMob = $(this)
-              .find("div.col-xs-3>div>div")
-              .attr("data-image");
-            const name = $(this)
-              .find("div.col-xs-7>div>h3.truyen-title>a")
-              .text();
-            const author = $(this).find("div.col-xs-7>div>span.author").text();
-            const linkName = removeVietnameseTones(name)
-              .toLowerCase()
-              .replace(/ /g, "-");
-            const obj = {
-              name: name,
-              author: author.trim(),
-              link: linkName,
-              imageListDesk: imageList,
-              imageListMob: imageListMob,
-            };
-            arr.push(obj);
-            emitter.emit("fetchNext");
-          });
-        }
+for (let i = 2; i <= 1120; i++) {
+  const baseURL = "https://truyenfull.vn/danh-sach/truyen-moi/trang-" + i + "/";
+  request(baseURL, function (err, res, body) {
+    if (err) {
+      console.log(err, "error occurred while hitting URL");
+    } else {
+      let $ = cheerio.load(body);
+      $("div.row[itemtype='https://schema.org/Book']").each(function (index) {
+        const imageList = $(this)
+          .find("div.col-xs-3>div>div")
+          .attr("data-desk-image");
+        const imageListMob = $(this)
+          .find("div.col-xs-3>div>div")
+          .attr("data-image");
+        const name = $(this).find("div.col-xs-7>div>h3.truyen-title>a").text();
+        const author = $(this).find("div.col-xs-7>div>span.author").text();
+        const linkName = removeVietnameseTones(name)
+          .toLowerCase()
+          .replace(/ /g, "-");
+        const obj = {
+          name: name,
+          author: author.trim(),
+          link: linkName,
+          imageListDesk: imageList,
+          imageListMob: imageListMob,
+        };
+        arr.push(obj);
       });
-      if (i - 1120 === 0) {
-        fs.writeFile("data.txt", JSON.stringify(arr), function (err) {
-          if (err) {
-            console.log(err);
-          } else {
-            console.log("success");
-          }
-        });
-      }
     }
-  }, 5000);
+  });
 }
 
-emitter.on("fetchNext", doCrawl);
+fs.writeFile("data.txt", JSON.stringify(arr), function (err) {
+  if (err) {
+    console.log(err);
+  } else {
+    console.log("success");
+  }
+});
