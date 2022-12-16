@@ -71,7 +71,7 @@ function crawlPage(URL) {
 }
 
 crawlPage(URL);
-
+//sdsdsdd
 for (let i = 2; i <= 1120; i++) {
   const baseURL = "https://truyenfull.vn/danh-sach/truyen-moi/trang-" + i + "/";
   crawlPage(baseURL);
